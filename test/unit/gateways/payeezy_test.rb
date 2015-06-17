@@ -30,6 +30,16 @@ class PayeezyGateway < Test::Unit::TestCase
     assert_equal 'HMAC validation Failure', response.message
   end
 
+  def text_invalid_token
+    @gateway.expects(:ssl_post).raises(invalid_token_response)
+
+    assert response = @gateway.authorize(100, @credit_card, {})
+    assert_failure response
+    assert response.test?
+    assert_equal '', response.authorization
+    assert_equal 'Access denied invalid base64encoded token', response.message
+  end
+
   def test_successful_purchase
     @gateway.expects(:ssl_post).returns(successful_purchase_response)
     assert response = @gateway.purchase(@amount, @credit_card, @options)
@@ -167,6 +177,13 @@ response: !ruby/object:Net::HTTPBadRequest
   socket:
   body_exist: true
 message:
+    RESPONSE
+    YAML.load(yamlexcep)
+  end
+
+  def invalid_token_response
+    yamlexcep = <<-RESPONSE
+    --- !ruby/exception:ActiveMerchant::ResponseError\nresponse: !ruby/object:Net::HTTPUnauthorized\n  http_version: '1.1'\n  code: '401'\n  message: Unauthorized\n  header:\n    content-type:\n    - application/json\n    content-length:\n    - '125'\n    connection:\n    - Close\n  body: '{\"fault\":{\"faultstring\":\"Invalid ApiKey for given resource\",\"detail\":{\"errorcode\":\"oauth.v2.InvalidApiKeyForGivenResource\"}}}'\n  read: true\n  uri: \n  decode_content: true\n  socket: \n  body_exist: true\nmessage: \n
     RESPONSE
     YAML.load(yamlexcep)
   end

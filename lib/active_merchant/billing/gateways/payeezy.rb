@@ -213,6 +213,8 @@ module ActiveMerchant
           response['message']
         elsif response.key?('Error')
           response['Error'].to_h['messages'].map { |m| m['description'] }.join('. ')
+        elsif response.key?('error')
+          response['error']
         else
           response['bank_message']
         end
