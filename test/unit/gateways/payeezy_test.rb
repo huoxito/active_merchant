@@ -30,14 +30,31 @@ class PayeezyGateway < Test::Unit::TestCase
     assert_equal 'HMAC validation Failure', response.message
   end
 
-  def text_invalid_token
+  def test_invalid_token
     @gateway.expects(:ssl_post).raises(invalid_token_response)
 
     assert response = @gateway.authorize(100, @credit_card, {})
     assert_failure response
     assert response.test?
     assert_equal '', response.authorization
-    assert_equal 'Access denied invalid base64encoded token', response.message
+    assert_equal 'Access denied', response.message
+  end
+
+  def test_invalid_token_on_integration
+    gateway = PayeezyGateway.new(
+      apikey: "45234543524353",
+      apisecret: "4235423325",
+      token: "rewrt-23543543542353542",
+      integration: true
+    )
+
+    gateway.expects(:ssl_post).raises(invalid_token_response_integration)
+
+    assert response = gateway.authorize(100, @credit_card, {})
+    assert_failure response
+    assert response.test?
+    assert_equal '', response.authorization
+    assert_equal 'Invalid ApiKey for given resource', response.message
   end
 
   def test_successful_purchase
@@ -183,7 +200,64 @@ message:
 
   def invalid_token_response
     yamlexcep = <<-RESPONSE
-    --- !ruby/exception:ActiveMerchant::ResponseError\nresponse: !ruby/object:Net::HTTPUnauthorized\n  http_version: '1.1'\n  code: '401'\n  message: Unauthorized\n  header:\n    content-type:\n    - application/json\n    content-length:\n    - '125'\n    connection:\n    - Close\n  body: '{\"fault\":{\"faultstring\":\"Invalid ApiKey for given resource\",\"detail\":{\"errorcode\":\"oauth.v2.InvalidApiKeyForGivenResource\"}}}'\n  read: true\n  uri: \n  decode_content: true\n  socket: \n  body_exist: true\nmessage: \n
+--- !ruby/exception:ActiveMerchant::ResponseError
+response: !ruby/object:Net::HTTPUnauthorized
+  http_version: '1.1'
+  code: '401'
+  message: Unauthorized
+  header:
+    content-language:
+    - en-US
+    content-type:
+    - application/json;charset=utf-8
+    date:
+    - Tue, 23 Jun 2015 15:13:02 GMT
+    optr_cxt:
+    - 435543224354-37b2-4369-9cfe-26543635465346346-0000-0000-0000-000000000000-1                                  HTTP    ;
+    x-archived-client-ip:
+    - 10.180.205.250
+    x-backside-transport:
+    - FAIL FAIL,FAIL FAIL
+    x-client-ip:
+    - 10.180.205.250,107.23.55.229
+    x-powered-by:
+    - Servlet/3.0
+    content-length:
+    - '25'
+    connection:
+    - Close
+  body: '{"error":"Access denied"}'
+  read: true
+  uri:
+  decode_content: true
+  socket:
+  body_exist: true
+message:
+    RESPONSE
+    YAML.load(yamlexcep)
+  end
+
+  def invalid_token_response_integration
+    yamlexcep = <<-RESPONSE
+--- !ruby/exception:ActiveMerchant::ResponseError
+response: !ruby/object:Net::HTTPUnauthorized
+  http_version: '1.1'
+  code: '401'
+  message: Unauthorized
+  header:
+    content-type:
+    - application/json
+    content-length:
+    - '125'
+    connection:
+    - Close
+  body: '{\"fault\":{\"faultstring\":\"Invalid ApiKey for given resource\",\"detail\":{\"errorcode\":\"oauth.v2.InvalidApiKeyForGivenResource\"}}}'
+  read: true
+  uri:
+  decode_content: true
+  socket:
+  body_exist: true
+message:
     RESPONSE
     YAML.load(yamlexcep)
   end

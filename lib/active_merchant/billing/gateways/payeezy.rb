@@ -1,7 +1,10 @@
 module ActiveMerchant
   module Billing
     class PayeezyGateway < Gateway
+      class_attribute :integration_url
+
       self.test_url = 'https://api-cert.payeezy.com/v1/transactions'
+      self.integration_url = 'https://api-cat.payeezy.com/v1/transactions'
       self.live_url = 'https://api.payeezy.com/v1/transactions'
 
       self.default_currency = 'USD'
@@ -51,7 +54,12 @@ module ActiveMerchant
 
       def init_options
         init_options = {}
-        init_options[:url] = "#{test? ? test_url : live_url}"
+        init_options[:url] = if options[:integration]
+                               integration_url
+                             else
+                               "#{test? ? test_url : live_url}"
+                             end
+
         init_options[:apikey] = options[:apikey]
         init_options[:apisecret] = options[:apisecret]
         init_options[:token] = options[:token]
@@ -215,6 +223,8 @@ module ActiveMerchant
           response['Error'].to_h['messages'].map { |m| m['description'] }.join('. ')
         elsif response.key?('error')
           response['error']
+        elsif response.key?('fault')
+          response['fault'].to_h['faultstring']
         else
           response['bank_message']
         end
